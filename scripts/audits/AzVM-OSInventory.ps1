@@ -26,12 +26,14 @@
 
 .CHANGELOG
     1.0 - Initial release
+    1.1 - Changed support for OS ARN instead of simple patterns to be more accurate
 
 .LASTUPDATE
-    2025-08-05
+    2025-08-06
 
 .NOTES
-    You can update the $UnsupportedOSPatterns array to match your organization’s support policies.
+    You can update the $UnsupportedOSPatterns array to match your organization’s support policies
+    to reflect unsupported OS images (URN without version).
     Output is also exported as CSV in the script directory.
 
 .USAGE
@@ -39,16 +41,15 @@
 #>
 
 # ==================== CONFIGURATION ====================
-# List of OS descriptions or patterns considered out of support
-# Full List: https://az-vm-image.info/?cmd=--all
+# List of OS ARNS considered out of support
+# Find ARN on: https://az-vm-image.info/?cmd=--all
 $UnsupportedOSPatterns = @(
-    "Windows-10",
-    "Windows Server 2012",
-    "Windows Server 2008",
-    "Ubuntu 16",
-    "Ubuntu 18",
-    "CentOS 6",
-    "CentOS 7"
+    "MicrosoftWindowsDesktop:Windows-10:win10-22h2-pro-g2",
+    "MicrosoftWindowsServer:WindowsServer:2012-r2-datacenter-gen2",
+    "Canonical:UbuntuServer:16.04-LTS",
+    "Canonical:UbuntuServer:18.04-LTS",
+    "OpenLogic:CentOS:6.5",
+    "OpenLogic:CentOS:7.5"
 )
 $exportCSV=$false
 
@@ -66,7 +67,9 @@ Write-Host ""
 
 #Configuration Output
 Write-Host "Configuration: " -ForegroundColor Yellow
-Write-Host " - Defined unsupported OS: $($UnsupportedOSPatterns -join ', ')"
+
+$formattedList = $UnsupportedOSPatterns | ForEach-Object { "   • $_" } | Out-String
+Write-Host " - Defined unsupported OS:`n$formattedList"
 Write-Host ""
 
 # Login
@@ -101,17 +104,16 @@ foreach ($sub in $subscriptions) {
     }
 
     foreach ($vm in $vms) {
-        $osName =   $vm.StorageProfile.ImageReference.Publisher + " " + `
-                    $vm.StorageProfile.ImageReference.Offer + " " + `
-                    $vm.StorageProfile.ImageReference.Sku
+        $imageRef = $vm.StorageProfile.ImageReference
 
         $outOfSupport = $false
-        foreach ($pattern in $UnsupportedOSPatterns) {
-            if ($osName -like "*$pattern*") {
-                $outOfSupport = $true
-                break
-            }
+        if (-not $imageRef) {
+            Write-Warning "VM '$($vm.Name)' has no ImageReference - skipping."
+            continue
         }
+
+        $urnNoVersion = "$($imageRef.Publisher):$($imageRef.Offer):$($imageRef.Sku)"
+        $outOfSupport = $UnsupportedOSPatterns -contains $urnNoVersion
 
         $vmInfo = [PSCustomObject]@{
             VMName          = $vm.Name
@@ -131,7 +133,7 @@ foreach ($sub in $subscriptions) {
         $vmInventory += $vmInfo
 
         $statusColor = if ($outOfSupport) { 'Red' } else { 'Green' }
-        Write-Host "VM: $($vm.Name) - $($osName) - OutOfSupport: $outOfSupport" -ForegroundColor $statusColor
+        Write-Host "VM: $($vm.Name) - $($urnNoVersion) - OutOfSupport: $outOfSupport" -ForegroundColor $statusColor
     }
 
     Write-Host "Subscription '$($sub.Name)' processing complete"
