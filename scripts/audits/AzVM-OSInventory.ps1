@@ -131,7 +131,6 @@ foreach ($sub in $subscriptions) {
             OSSku           = $vm.StorageProfile.ImageReference.Sku
             OSVersion       = $vm.StorageProfile.ImageReference.Version
             OutOfSupport    = $outOfSupport
-            PowerState      = ($vm.Statuses | Where-Object { $_.Code -like 'PowerState/*' }).DisplayStatus
         }
 
         $vmInventory += $vmInfo
