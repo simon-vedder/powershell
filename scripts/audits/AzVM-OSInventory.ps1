@@ -41,6 +41,11 @@
 #>
 
 # ==================== CONFIGURATION ====================
+
+param (
+    [Parameter(Mandatory = $false)]
+    [bool]$exportCSV = $false
+)
 # List of OS ARNS considered out of support
 # Find ARN on: https://az-vm-image.info/?cmd=--all
 $UnsupportedOSPatterns = @(
@@ -51,7 +56,6 @@ $UnsupportedOSPatterns = @(
     "OpenLogic:CentOS:6.5",
     "OpenLogic:CentOS:7.5"
 )
-$exportCSV=$false
 
 # ==================== SCRIPT EXECUTION ====================
 
