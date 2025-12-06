@@ -1,0 +1,104 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "automationAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the existing Automation Account"
+      }
+    },
+    "runbookName": {
+      "type": "string",
+      "defaultValue": "VM-PowerManagement",
+      "metadata": {
+        "description": "Name of the runbook"
+      }
+    },
+    "powerShellScriptUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI to the PowerShell script file"
+      },
+      "defaultValue": "https://raw.githubusercontent.com/simon-vedder/powershell/refs/heads/main/scripts/utilities/VM-Powermanagement/VM-PowerManagement.ps1"
+    },
+    "scheduleName": {
+      "type": "string",
+      "defaultValue": "hourly-schedule",
+      "metadata": {
+        "description": "Name of the schedule"
+      }
+    },
+    "timezone": {
+      "type": "string",
+      "defaultValue": "Europe/Zurich",
+      "metadata": {
+        "description": "Timezone for the schedule"
+      }
+    },
+    "startDateTime": {
+      "type": "string",
+      "defaultValue": "[dateTimeAdd(utcNow(), 'PT1H')]",
+      "metadata": {
+        "description": "Start date and time for the first schedule execution"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Automation/automationAccounts/runbooks",
+      "apiVersion": "2020-01-13-preview",
+      "name": "[concat(parameters('automationAccountName'), '/', parameters('runbookName'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "runbookType": "PowerShell72",
+        "logVerbose": true,
+        "logProgress": true,
+        "description": "PowerShell runbook executed hourly",
+        "publishContentLink": {
+          "uri": "[parameters('powerShellScriptUri')]",
+          "version": "1.0.0"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/schedules",
+      "apiVersion": "2020-01-13-preview",
+      "name": "[concat(parameters('automationAccountName'), '/', parameters('scheduleName'))]",
+      "properties": {
+        "description": "Schedule that runs every hour",
+        "startTime": "[parameters('startDateTime')]",
+        "frequency": "Hour",
+        "interval": 1,
+        "timeZone": "[parameters('timezone')]"
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/jobSchedules",
+      "apiVersion": "2020-01-13-preview",
+      "name": "[concat(parameters('automationAccountName'), '/', guid(parameters('scheduleName'), parameters('runbookName')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('automationAccountName'), parameters('runbookName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('automationAccountName'), parameters('scheduleName'))]"
+      ],
+      "properties": {
+        "schedule": {
+          "name": "[parameters('scheduleName')]"
+        },
+        "runbook": {
+          "name": "[parameters('runbookName')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "runbookName": {
+      "type": "string",
+      "value": "[parameters('runbookName')]"
+    },
+    "scheduleName": {
+      "type": "string",
+      "value": "[parameters('scheduleName')]"
+    }
+  }
+}
