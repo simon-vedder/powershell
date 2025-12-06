@@ -20,7 +20,7 @@
       "metadata": {
         "description": "URI to the PowerShell script file"
       },
-      "defaultValue": "https://raw.githubusercontent.com/simon-vedder/powershell/refs/heads/main/scripts/utilities/VM-Powermanagement/VM-PowerManagement.ps1"
+      "defaultValue": "https://raw.githubusercontent.com/simon-vedder/powershell/refs/heads/main/scripts/utilities/VM-Powermanagement/VM-Powermanagement.ps1"
     },
     "scheduleName": {
       "type": "string",
