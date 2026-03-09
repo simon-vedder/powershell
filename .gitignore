@@ -24,3 +24,7 @@ Thumbs.db
 
 # Parameter files with local overrides
 parameters/*.local.json
+
+#VM-CostAnalyzer Output Files
+VM-Cost-Analysis-*.csv
+VM-Cost-Analysis-*.html
