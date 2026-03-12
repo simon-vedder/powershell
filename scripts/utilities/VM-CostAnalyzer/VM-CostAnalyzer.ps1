@@ -990,7 +990,7 @@ try {
         
         [double]$totalCurrent = 0.0
         foreach ($result in $allVMResults) {
-            $totalCurrent += [double]($result.'Cost 24/7')
+            $totalCurrent += [double](($result.'Cost 24/7') -replace '\.', '' -replace ',', '.')
         }
         
         Write-Output "Total Monthly Cost (24/7): $([math]::Round([double]$totalCurrent, 2))"
@@ -999,7 +999,7 @@ try {
         $totalPotentialSavings = 0
 
         foreach ($result in $allVMResults) {
-            $actualCost = [double]($result.'Cost Actual' -replace ',', '.')
+            $actualCost = [double](($result.'Cost Actual') -replace '\.', '' -replace ',', '.')
             $totalActual += $actualCost
             
             # Extract potential savings from recommendation
@@ -1014,14 +1014,14 @@ try {
         Write-Output "Total Potential Monthly Savings: $([math]::Round($totalPotentialSavings, 2)) ($([math]::Round(($totalPotentialSavings / $totalActual) * 100, 1))%)"
         
         # Recommendation breakdown
-        $recBreakdown = $allVMResults | Group-Object 'Cost Saving Recommendation'
+        $recBreakdown = $allVMResults | Group-Object 'Recommendation'
         Write-Output "`nCost Saving Recommendations:"
         foreach ($rec in $recBreakdown) {
             Write-Output "  $($rec.Name): $($rec.Count) VMs"
         }
         
         # Sizing breakdown
-        $sizingBreakdown = $allVMResults | Group-Object 'Sizing Recommendation'
+        $sizingBreakdown = $allVMResults | Group-Object 'Sizing'
         Write-Output "`nSizing Recommendations:"
         foreach ($size in $sizingBreakdown) {
             Write-Output "  $($size.Name): $($size.Count) VMs"
