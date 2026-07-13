@@ -1,55 +1,80 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+  "metadata": {
+    "author": "Simon Vedder",
+    "description": "Tag-driven VM power management: a dedicated Automation Account with a system-assigned identity, an hourly runbook and schedule. Curated least-privilege variant for TenantThrift — the identity gets only the built-in Desktop Virtualization Power On Off Contributor role (start/stop/deallocate), never write or delete."
+  },
   "parameters": {
     "automationAccountName": {
       "type": "string",
-      "metadata": {
-        "description": "Name of the existing Automation Account"
-      }
+      "defaultValue": "aa-vm-powermanagement",
+      "metadata": { "description": "Name of the Automation Account to create" }
     },
     "runbookName": {
       "type": "string",
       "defaultValue": "VM-PowerManagement",
-      "metadata": {
-        "description": "Name of the runbook"
-      }
+      "metadata": { "description": "Name of the runbook" }
     },
     "powerShellScriptUri": {
       "type": "string",
-      "metadata": {
-        "description": "URI to the PowerShell script file"
-      },
-      "defaultValue": "https://raw.githubusercontent.com/simon-vedder/powershell/refs/heads/main/scripts/utilities/VM-Powermanagement/VM-Powermanagement.ps1"
+      "defaultValue": "https://raw.githubusercontent.com/simon-vedder/powershell/refs/heads/main/scripts/utilities/VM-Powermanagement/VM-Powermanagement.ps1",
+      "metadata": { "description": "URI to the PowerShell script file" }
     },
     "scheduleName": {
       "type": "string",
       "defaultValue": "hourly-schedule",
-      "metadata": {
-        "description": "Name of the schedule"
-      }
+      "metadata": { "description": "Name of the schedule" }
     },
     "timezone": {
       "type": "string",
       "defaultValue": "Europe/Zurich",
-      "metadata": {
-        "description": "Timezone for the schedule"
-      }
+      "metadata": { "description": "Timezone for the schedule" }
     },
     "startDateTime": {
       "type": "string",
       "defaultValue": "[dateTimeAdd(utcNow(), 'PT1H')]",
-      "metadata": {
-        "description": "Start date and time for the first schedule execution"
-      }
+      "metadata": { "description": "Start date and time for the first schedule execution" }
+    },
+    "jobScheduleGuid": {
+      "type": "string",
+      "defaultValue": "[guid(utcNow())]",
+      "metadata": { "description": "Unique name for the job schedule. Leave default — Azure Automation retains job-schedule GUIDs, so a deterministic name throws 'already exists'." }
+    }
+  },
+  "variables": {
+    "powerRoleId": "40c5ff49-9181-41f8-ae61-143b0e78555e",
+    "defaultTags": {
+      "Author": "Simon Vedder",
+      "Contact": "info@simonvedder.com",
+      "Project": "VM-PowerManagement",
+      "ManagedBy": "ARM"
     }
   },
   "resources": [
+    {
+      "type": "Microsoft.Automation/automationAccounts",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('automationAccountName')]",
+      "location": "[resourceGroup().location]",
+      "tags": "[variables('defaultTags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "sku": {
+          "name": "Basic"
+        }
+      }
+    },
     {
       "type": "Microsoft.Automation/automationAccounts/runbooks",
       "apiVersion": "2020-01-13-preview",
       "name": "[concat(parameters('automationAccountName'), '/', parameters('runbookName'))]",
       "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
       "properties": {
         "runbookType": "PowerShell72",
         "logVerbose": true,
@@ -65,6 +90,9 @@
       "type": "Microsoft.Automation/automationAccounts/schedules",
       "apiVersion": "2020-01-13-preview",
       "name": "[concat(parameters('automationAccountName'), '/', parameters('scheduleName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
       "properties": {
         "description": "Schedule that runs every hour",
         "startTime": "[parameters('startDateTime')]",
@@ -76,7 +104,7 @@
     {
       "type": "Microsoft.Automation/automationAccounts/jobSchedules",
       "apiVersion": "2020-01-13-preview",
-      "name": "[concat(parameters('automationAccountName'), '/', guid(parameters('scheduleName'), parameters('runbookName')))]",
+      "name": "[concat(parameters('automationAccountName'), '/', parameters('jobScheduleGuid'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('automationAccountName'), parameters('runbookName'))]",
         "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('automationAccountName'), parameters('scheduleName'))]"
@@ -89,16 +117,64 @@
           "name": "[parameters('runbookName')]"
         }
       }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "powerRoleAssignment",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2023-11-01', 'full').identity.principalId]"
+          },
+          "roleId": {
+            "value": "[variables('powerRoleId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "principalId": {
+              "type": "string"
+            },
+            "roleId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, parameters('principalId'), parameters('roleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "outputs": {
+    "automationAccountName": {
+      "type": "string",
+      "value": "[parameters('automationAccountName')]"
+    },
     "runbookName": {
       "type": "string",
       "value": "[parameters('runbookName')]"
-    },
-    "scheduleName": {
-      "type": "string",
-      "value": "[parameters('scheduleName')]"
     }
   }
 }
