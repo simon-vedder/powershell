@@ -1,16 +1,16 @@
-# ---------------------------------------------------------------------------------------------
-# SUPERSEDED. This script has been rebuilt as a PowerShell module that finds the same things and
-# adds what a single file could not do: findings as objects, a documented score, and a removal
-# path that asks first, writes a JSON backup and refuses anything inherited through a group, held
-# in PIM, named as break-glass or belonging to the account running the audit. Restore reads the
-# backup back.
+﻿# ---------------------------------------------------------------------------------------------
+# SUPERSEDED. This script has been rebuilt. The rebuilt version is still a single file you
+# download and run, and it fixes what this one gets wrong: custom roles are rated correctly on
+# Az.Resources 10, PIM activations are told apart from permanent assignments, the score is
+# documented, and every finding carries the command that fixes it.
 #
-#     Install-Module RiskyRolesAnalyzer -AllowPrerelease
-#     https://github.com/simon-vedder/risky-roles-analyzer
+#     Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/simon-vedder/risky-roles-analyzer/main/dist/Invoke-RiskyRolesAudit.ps1' -OutFile 'Invoke-RiskyRolesAudit.ps1'
+#
+#     https://simonvedder.com/tools/risky-roles-analyzer/
 #
 # This file stays as it was published in May 2026, together with the post it belongs to:
 # https://simonvedder.com/the-privileged-role-exposures-defender-misses/
-# It gets no further changes. Use the module.
+# It gets no further changes, and on Az.Resources 10 it reports every custom role as harmless.
 # ---------------------------------------------------------------------------------------------
 
 <#
@@ -76,13 +76,14 @@
         Graph:  RoleManagement.Read.Directory, Directory.Read.All, Group.Read.All,
                 Application.Read.All
 
-    Superseded by the RiskyRolesAnalyzer module. This file is kept as published and unchanged.
+    Superseded by the rebuilt Invoke-RiskyRolesAudit.ps1. This file is kept as published and
+    unchanged.
+
+.LINK
+    https://simonvedder.com/tools/risky-roles-analyzer/
 
 .LINK
     https://github.com/simon-vedder/risky-roles-analyzer
-
-.LINK
-    https://www.powershellgallery.com/packages/RiskyRolesAnalyzer
 #>
 
 [CmdletBinding()]
