@@ -1,3 +1,18 @@
+# ---------------------------------------------------------------------------------------------
+# SUPERSEDED. This script has been rebuilt as a PowerShell module that finds the same things and
+# adds what a single file could not do: findings as objects, a documented score, and a removal
+# path that asks first, writes a JSON backup and refuses anything inherited through a group, held
+# in PIM, named as break-glass or belonging to the account running the audit. Restore reads the
+# backup back.
+#
+#     Install-Module RiskyRolesAnalyzer -AllowPrerelease
+#     https://github.com/simon-vedder/risky-roles-analyzer
+#
+# This file stays as it was published in May 2026, together with the post it belongs to:
+# https://simonvedder.com/the-privileged-role-exposures-defender-misses/
+# It gets no further changes. Use the module.
+# ---------------------------------------------------------------------------------------------
+
 <#
 .SYNOPSIS
     RiskyRolesAnalyzer — audits privileged Azure RBAC and Entra ID role assignments
@@ -60,6 +75,14 @@
         Azure:  Reader on every subscription you want to audit (Mgmt Group level works too)
         Graph:  RoleManagement.Read.Directory, Directory.Read.All, Group.Read.All,
                 Application.Read.All
+
+    Superseded by the RiskyRolesAnalyzer module. This file is kept as published and unchanged.
+
+.LINK
+    https://github.com/simon-vedder/risky-roles-analyzer
+
+.LINK
+    https://www.powershellgallery.com/packages/RiskyRolesAnalyzer
 #>
 
 [CmdletBinding()]
